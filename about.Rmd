@@ -1,6 +1,6 @@
 ---
 title: "About This Website"
-author: "Your name"
+author: "Chaia Yodaiken"
 date: "Last updated on `r Sys.Date()`"
 output:
   html_document:
