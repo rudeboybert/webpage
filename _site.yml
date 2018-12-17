@@ -1,4 +1,4 @@
-name: "my-website"
+name: "What can you Emit to?"
 output_dir: docs
 # The website theme was chosen from
 # https://rmarkdown.rstudio.com/html_document_format#appearance_and_style
@@ -7,19 +7,19 @@ output:
     toc: yes
     toc_float: yes
     toc_depth: 2
-    theme: cosmo
+    theme: paper
     highlight: tango
     df_print: paged
     lib_dir: site_libs
     self_contained: no
 # All fa icons were obtained from https://fontawesome.com/icons?d=gallery
 navbar:
-  title: "My Website"
+  title: "What can you Emit to?"
   left:
     - text: "Home"
       href: index.html
-    - text: "About"
-      href: about.html
-  right:
-    - icon: fa-slack fa-lg
-      href: https://2018-fall-sds-albert.slack.com/
+    - text: "Learn More"
+      href: more_info.html
+#  right:
+#    - icon: fa-slack fa-lg
+#      href: https://2018-fall-sds-albert.slack.com/

@@ -1,0 +1,539 @@
+---
+title: "Learn More: Trends Over Time"
+author: "Sofia Baptista & Chaia Yodaiken"
+date: "Last updated on `r Sys.Date()`"
+output:
+  html_document:
+    highlight: tango
+    theme: paper
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    df_print: kable
+    code_folding: hide
+---
+
+```{r, message=FALSE, warning=FALSE} 
+# Loading Packages and Data
+library(tidyverse)
+library(maps)
+library(leaflet)
+library(sf)
+library(gridExtra)
+library(grid)
+# install.packages("extrafont")
+# library(extrafont)
+# font_import()
+
+
+# Loads ftprint data
+ftprint <- read_csv("NFA 2018.csv")
+
+# Creating world that has geometry for all countries
+world <- maps::map("world", plot = FALSE, fill = TRUE, labels = TRUE) %>%
+  sf::st_as_sf() %>%
+  sf::st_transform(4326) 
+
+# Chart Theme
+chart_theme <- theme(
+  plot.title = element_text(family = "Arial", face = "bold", size = (12.5)), 
+  legend.title = element_text(face = "italic", family = "Verdana"), 
+  legend.text = element_text(face = "italic", family = "Verdana", size = (8)), 
+  axis.title = element_text(family = "Arial", size = (11)),
+  axis.text = element_text())
+
+
+# Data Wrangling
+
+# Renaming ftprint countries to standardize naming scheme
+ftprint$`country`[ftprint$`country` == "United States of America"] <- "USA"
+ftprint$`country`[ftprint$`country` == "Venezuela, Bolivarian Republic of"] <- "Venezuela"
+ftprint$`country`[ftprint$`country` == "Viet Nam"] <- "Vietnam"
+ftprint$`country`[ftprint$`country` == "Antigua and Barbuda"] <- "Antigua"
+ftprint$`country`[ftprint$`country` == "Brunei Darussalam"] <- "Brunei"
+ftprint$`country`[ftprint$`country` == "Cabo Verde"] <- "Cape Verde"
+ftprint$`country`[ftprint$`country` == "Congo"] <- "Republic of Congo"
+ftprint$`country`[ftprint$`country` == "Iran, Islamic Republic of"] <- "Iran"
+ftprint$`country`[ftprint$`country` == "Côte d'Ivoire"] <- "Ivory Coast"
+ftprint$`country`[ftprint$`country` == "Korea, Democratic People's Republic of"] <- "North Korea"
+ftprint$`country`[ftprint$`country` == "Korea, Republic of"] <- "South Korea"
+ftprint$`country`[ftprint$`country` == "Lao People's Democratic Republic"] <- "Laos"
+ftprint$`country`[ftprint$`country` == "Libyan Arab Jamahiriya"] <- "Libya"
+ftprint$`country`[ftprint$`country` == "Macedonia TFYR"] <- "Macedonia"
+ftprint$`country`[ftprint$`country` == "Micronesia, Federated States of"] <- "Micronesia"
+ftprint$`country`[ftprint$`country` == "USSR"] <- "Russian Federation"
+ftprint$`country`[ftprint$`country` == "Russian Federation"] <- "Russia"
+ftprint$`country`[ftprint$`country` == "Syrian Arab Republic"] <- "Syria"
+ftprint$`country`[ftprint$`country` == "Réunion"] <- "Reunion"
+ftprint$`country`[ftprint$`country` == "Tanzania, United Republic of"] <- "Tanzania"
+ftprint$`country`[ftprint$`country` == "Trinidad and Tobago"] <- "Trinidad"
+ftprint$`country`[ftprint$`country` == "United Kingdom"] <- "UK"
+ftprint$`country`[ftprint$`country` == "Congo, Democratic Republic of"] <- "Democratic Republic of the Congo"
+
+# Creating Population for each UN Region as new df
+ftprint_UN_carbon <- ftprint %>%
+  filter(year == 2014 & record == "EFConsPerCap") %>%
+  filter(UN_region %in% c("Africa", 
+                          "Asia", 
+                          "Europe", 
+                          "Latin America and the Caribbean", 
+                          "North America", 
+                          "Oceania")) %>%
+  group_by(UN_region) %>%
+  mutate(UN_region_avg = mean(carbon, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(UN_region = recode(UN_region, 
+                            `Latin America and the Caribbean` = "Lat. America &\nCaribbean")) %>%
+  select(UN_region, UN_region_avg) %>%
+  unique() %>%
+  mutate(UN_region = reorder(UN_region, UN_region_avg)) 
+
+
+# DF's for Carbon Emissions for the years:
+
+# 2014
+# Select a subsection of variables from ftprint
+ftprint_map_2014 <- ftprint %>% 
+  select(ID = starts_with("country"), 
+         year, 
+         record, 
+         carbon, 
+         population,
+         crop_land,
+         built_up_land,
+         fishing_ground,
+         forest_land,
+         grazing_land,
+         UN_region,
+         `Percapita GDP (2010 USD)`) %>%
+  filter(record == "EFConsPerCap") %>% 
+  filter(year == 2014)
+
+# Joining world with ftprint_map
+ftprint_world_sf_2014 <- world %>%
+  left_join(ftprint_map_2014, by = "ID") 
+
+
+# 2010
+# Select a subsection of variables from ftprint
+ftprint_map_2010 <- ftprint %>% 
+  select(ID = starts_with("country"), 
+         year, 
+         record, 
+         carbon, 
+         population,
+         crop_land,
+         built_up_land,
+         UN_region,
+         `Percapita GDP (2010 USD)`) %>%
+  filter(record == "EFConsPerCap") %>% 
+  filter(year == 2010)
+
+# Joining world with ftprint_map
+ftprint_world_sf_2010 <- world %>%
+  left_join(ftprint_map_2010, by = "ID") 
+
+
+# 2000
+# Select a subsection of variables from ftprint
+ftprint_map_2000 <- ftprint %>% 
+  select(ID = starts_with("country"), 
+         year, 
+         record, 
+         carbon, 
+         population,
+         crop_land,
+         built_up_land,
+         UN_region,
+         `Percapita GDP (2010 USD)`) %>%
+  filter(record == "EFConsPerCap") %>% 
+  filter(year == 2000)
+
+# Joining world with ftprint_map
+ftprint_world_sf_2000 <- world %>%
+  left_join(ftprint_map_2000, by = "ID") 
+
+
+# 1990
+# Select a subsection of variables from ftprint
+ftprint_map_1990 <- ftprint %>% 
+  select(ID = starts_with("country"), 
+         year, 
+         record, 
+         carbon, 
+         population,
+         crop_land,
+         built_up_land,
+         UN_region,
+         `Percapita GDP (2010 USD)`) %>%
+  filter(record == "EFConsPerCap") %>% 
+  filter(year == 1990)
+
+# Joining world with ftprint_map
+ftprint_world_sf_1990 <- world %>%
+  left_join(ftprint_map_1990, by = "ID") 
+
+
+# 1980
+# Select a subsection of variables from ftprint
+ftprint_map_1980 <- ftprint %>% 
+  select(ID = starts_with("country"), 
+         year, 
+         record, 
+         carbon, 
+         population,
+         crop_land,
+         built_up_land,
+         UN_region,
+         `Percapita GDP (2010 USD)`) %>%
+  filter(record == "EFConsPerCap") %>% 
+  filter(year == 1980)
+
+# Joining world with ftprint_map
+ftprint_world_sf_1980 <- world %>%
+  left_join(ftprint_map_1980, by = "ID") 
+
+
+# 1970
+# Select a subsection of variables from ftprint
+ftprint_map_1970 <- ftprint %>% 
+  select(ID = starts_with("country"), 
+         year, 
+         record, 
+         carbon, 
+         population,
+         crop_land,
+         built_up_land,
+         UN_region,
+         `Percapita GDP (2010 USD)`) %>%
+  filter(record == "EFConsPerCap") %>% 
+  filter(year == 1970)
+
+# Joining world with ftprint_map
+ftprint_world_sf_1970 <- world %>%
+  left_join(ftprint_map_1970, by = "ID") 
+
+
+# 1961
+# Select a subsection of variables from ftprint
+ftprint_map_1961 <- ftprint %>% 
+  select(ID = starts_with("country"), 
+         year, 
+         record, 
+         carbon, 
+         population,
+         crop_land,
+         built_up_land,
+         UN_region,
+         `Percapita GDP (2010 USD)`) %>%
+  filter(record == "EFConsPerCap") %>% 
+  filter(year == 1961)
+
+# Joining world with ftprint_map
+ftprint_world_sf_1961 <- world %>%
+  left_join(ftprint_map_1961, by = "ID") 
+
+
+# Making a df for each Top 5 Emitter
+USA_graph_EF <- ftprint %>%
+  filter(country == "USA" & record == "EFConsPerCap") %>%
+  gather(key = "Type of Land", value = "gha", crop_land:built_up_land)
+
+China_graph_EF <- ftprint %>%
+  filter(country == "China" & record == "EFConsPerCap") %>%
+  gather(key = "Type of Land", value = "gha", crop_land:built_up_land)
+
+Japan_graph_EF <- ftprint %>%
+  filter(country == "Japan" & record == "EFConsPerCap") %>%
+  gather(key = "Type of Land", value = "gha", crop_land:built_up_land)
+
+Russia_graph_EF <- ftprint %>%
+  filter(country == "Russia" & record == "EFConsPerCap") %>%
+  gather(key = "Type of Land", value = "gha", crop_land:built_up_land)
+
+India_graph_EF <- ftprint %>%
+  filter(country == "India" & record == "EFConsPerCap") %>%
+  gather(key = "Type of Land", value = "gha", crop_land:built_up_land)
+
+# Making a df from the Top 5 emitters
+graph_EF <- ftprint %>%
+  filter(country %in% c("China", "USA", "India", "Russia", "Japan")  & record == "EFConsPerCap")
+```
+
+```{r, message=FALSE, warning=FALSE} 
+# Create interactive map of Carbon over Years
+
+# Creating Palette
+pal <- colorQuantile("YlOrRd", NULL, n = 9)
+
+# Creating Popups
+carbon_em_2014_pop <- paste0(ftprint_world_sf_2014$ID, 
+                             "<br><strong>Carbon Emissions (gha): </strong>", 
+                             ftprint_world_sf_2014$carbon)
+
+carbon_em_2010_pop <- paste0(ftprint_world_sf_2010$ID, 
+                             "<br><strong>Carbon Emissions (gha): </strong>", 
+                             ftprint_world_sf_2010$carbon)
+
+carbon_em_2000_pop <- paste0(ftprint_world_sf_2000$ID, 
+                             "<br><strong>Carbon Emissions (gha): </strong>", 
+                             ftprint_world_sf_2000$carbon)
+
+carbon_em_1990_pop <- paste0(ftprint_world_sf_1990$ID, 
+                             "<br><strong>Carbon Emissions (gha): </strong>", 
+                             ftprint_world_sf_1990$carbon)
+
+carbon_em_1980_pop <- paste0(ftprint_world_sf_1980$ID, 
+                             "<br><strong>Carbon Emissions (gha): </strong>", 
+                             ftprint_world_sf_1980$carbon)
+
+carbon_em_1970_pop <- paste0(ftprint_world_sf_1970$ID, 
+                             "<br><strong>Carbon Emissions (gha): </strong>", 
+                             ftprint_world_sf_1970$carbon)
+
+carbon_em_1961_pop <- paste0(ftprint_world_sf_1961$ID, 
+                             "<br><strong>Carbon Emissions (gha): </strong>", 
+                             ftprint_world_sf_1961$carbon)
+
+# The Map
+leaflet() %>%
+  setView(lng = 0, lat = 10, zoom = 1.49) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(data = ftprint_world_sf_2014,
+              fillColor = ~pal(carbon),                # Adds Polygons with carbon data (2014) 
+              fillOpacity = 0.9, 
+              color = "#BDBDC3", 
+              weight = 1,
+              smoothFactor = 0.5,
+              popup = carbon_em_2014_pop, 
+              group = "Carbon Emissions 2014") %>%
+  addPolygons(data = ftprint_world_sf_2010,
+              fillColor = ~pal(carbon),                # Adds Polygons with carbon data (2010) 
+              fillOpacity = 0.9, 
+              color = "#BDBDC3", 
+              weight = 1,
+              smoothFactor = 0.5,
+              popup = carbon_em_2010_pop, 
+              group = "Carbon Emissions 2010") %>%
+  addPolygons(data = ftprint_world_sf_2000,
+              fillColor = ~pal(carbon),                # Adds Polygons with carbon data (2000) 
+              fillOpacity = 0.9, 
+              color = "#BDBDC3", 
+              weight = 1,
+              smoothFactor = 0.5,
+              popup = carbon_em_2000_pop, 
+              group = "Carbon Emissions 2000") %>%
+  addPolygons(data = ftprint_world_sf_1990,
+              fillColor = ~pal(carbon),                # Adds Polygons with carbon data (1990) 
+              fillOpacity = 0.9, 
+              color = "#BDBDC3", 
+              weight = 1,
+              smoothFactor = 0.5,
+              popup = carbon_em_1990_pop, 
+              group = "Carbon Emissions 1990") %>%
+  addPolygons(data = ftprint_world_sf_1980,
+              fillColor = ~pal(carbon),                # Adds Polygons with carbon data (1980) 
+              fillOpacity = 0.9, 
+              color = "#BDBDC3", 
+              weight = 1,
+              smoothFactor = 0.5,
+              popup = carbon_em_1980_pop, 
+              group = "Carbon Emissions 1980") %>%
+  addPolygons(data = ftprint_world_sf_1970,
+              fillColor = ~pal(carbon),                # Adds Polygons with carbon data (1970) 
+              fillOpacity = 0.9, 
+              color = "#BDBDC3", 
+              weight = 1,
+              smoothFactor = 0.5,
+              popup = carbon_em_1970_pop, 
+              group = "Carbon Emissions 1970") %>%
+  addPolygons(data = ftprint_world_sf_1961,
+              fillColor = ~pal(carbon),                # Adds Polygons with carbon data (1961) 
+              fillOpacity = 0.9, 
+              color = "#BDBDC3", 
+              weight = 1,
+              smoothFactor = 0.5,
+              popup = carbon_em_1961_pop, 
+              group = "Carbon Emissions 1961") %>%
+  addLayersControl(
+    baseGroups = c("Carbon Emissions 2014","Carbon Emissions 2010","Carbon Emissions 2000", "Carbon Emissions 1990", "Carbon Emissions 1980",  "Carbon Emissions 1970", "Carbon Emissions 1961"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+```
+Per capita carbon emissions from select years, 1961-2014 for the world's countries. Darker reds indicate higher per capita emissions (measured in global hectares). 
+
+North America and Australia have been the leading regions for highest carbon emissions per capita since 1961. This history of inefficient practice makes these regions larger and large global threats as their populations continue to expand. Parts of Asia and the Middle East are also increasing their per capita emissions. Large areas of Africa, South America, and India have kept low per capita emission rates consistently since 1961.
+
+On the bright side, we can see the large swaths of missing data in the earlier years becoming filled in as data collection has vastly improved as time has passed showing an increasing level of global awareness around issues of climate change. 
+
+# Who are the Major Players?
+
+```{r, message=FALSE, warning=FALSE} 
+# Graph of UN region average Carbon Emissions
+ggplot(ftprint_UN_carbon, aes(x = UN_region, y = UN_region_avg)) +
+  geom_col() +
+  labs(title = "UN Regions: Average Carbon Emissions Per Capita", 
+       x = "UN Region", 
+       y = "Avg. Carbon Emissions Per Capita (gha)") +
+  chart_theme
+```
+
+In decreasing order of contribution to total carbon emissions China, the United States of America, India, Russia, and Japan are the five highest ^[“Each Country's Share of CO2 Emissions.” Union of Concerned Scientists, www.ucsusa.org/global-warming/science-and-impacts/science/each-countrys-share-of-co2.html#.XBWbj9PwbaY.]. 
+
+Of the average carbon emissions per capita by region of the world, North America has the highest average carbon emissions per capita followed by Europe. There is quite a disparate range between North America and Africa, even North America and Europe. The US is a significant player in carbon emissions per capita and overall. As a world superpower, we have a responsibility to curb our carbon emissions. 
+
+# How are the Trends Changing?
+
+```{r, message=FALSE, warning=FALSE} 
+# Graphs top 5 countries: carbon emitters
+ggplot(data = graph_EF, aes(x = year, y = carbon, color = country)) +
+  geom_line() + 
+  # adds more years to the x axis
+  scale_x_continuous(
+    breaks = round(seq(min(graph_EF$year), max(graph_EF$year), by = 5), 1)) +
+  labs(
+    title = "World's Top 5 Carbon Emitters: Carbon Emissions Per Capita",
+    x = "Year", 
+    y = "Carbon (gha)") +
+  # customizes the colors and renames the legend title
+  scale_color_manual(
+    values=c("darkred", "orange", "olivedrab4", "darkblue", "black"),
+    name = "Country") + 
+  chart_theme
+```
+
+China and India to a lesser degree, have had a recent upshoot in per capita carbon emissions since 2000, which can create a large impact on overall emissions because of their huge population sizes. The United States has slightly decreased their per capita carbon emissions recently, but still struggles to pair down the amount of carbon emissions each person contributes. Japan has had a steady increase in per capita emissions since 1960. However, all these countries fall much lower than the United States for per capita emission. We have the ability to change our own and the world’s carbon emission trend to slow global climate change, however we need to focus on reducing the impact that each person has on how much we emit.
+
+# How can Other Factors Connect to Climate Change?
+
+```{r, message=FALSE, warning=FALSE} 
+# Graphs USA per capita land distribtion 
+USA <- ggplot(data = USA_graph_EF, aes(x = year, y = gha, color = `Type of Land` )) +
+  geom_line() +
+  # adds more years to the x axis 
+  scale_x_continuous(
+    breaks = round(seq(min(graph_EF$year), max(graph_EF$year), by = 10), 1)) +
+  labs(title = "USA: Per Capita Resource Distribution", 
+       x = "Year",
+       y = "Global Hectares") + 
+  # customizes the colors and renames the variable and legend titles
+  scale_color_manual(
+    values=c("darkgrey", "darkcyan", "midnightblue", "darkgreen", "brown"),
+    labels=c("Built-up Land", "Cropland", "Fishing Ground", "Forest Land", "Grazing Land"),
+    name = "Land Type") +
+  chart_theme +
+  ylim(0.0, 1.5)
+
+# Graphs China per capita land distribtion 
+China <- ggplot(data = China_graph_EF, aes(x = year, y = gha, color = `Type of Land` )) +
+  geom_line() +
+  # adds more years to the x axis 
+  scale_x_continuous(
+    breaks = round(seq(min(graph_EF$year), max(graph_EF$year), by = 10), 1)) +
+  labs(title = "China: Per Capita Resource Distribution", 
+       x = "Year",
+       y = "Global Hectares") +
+  # customizes the colors and renames the variable and legend titles
+  scale_color_manual(
+    values=c("darkgrey", "darkcyan", "midnightblue","darkgreen", "brown"),
+    labels=c("Built-up Land", "Cropland", "Fishing Ground", "Forest Land", "Grazing Land"),
+    name = "Land Type") +
+  chart_theme +
+  ylim(0.0, 1.5)
+
+# Graphs India per capita land distribtion 
+India <- ggplot(data = India_graph_EF, aes(x = year, y = gha, color = `Type of Land`)) +
+  geom_line() +
+  # adds more years to the x axis 
+  scale_x_continuous(
+    breaks = round(seq(min(graph_EF$year), max(graph_EF$year), by = 10), 1)) +
+  labs(title = "India: Per Capita Resource Distribution", 
+       x = "Year",
+       y = "Global Hectares") + 
+  # customizes the colors and renames the variable and legend titles
+  scale_color_manual(
+    values=c("darkgrey", "darkcyan", "midnightblue", "darkgreen", "brown"),
+    labels=c("Built-up Land", "Cropland", "Fishing Ground", "Forest Land", "Grazing Land"),
+    name = "Land Type") +
+  chart_theme +
+  ylim(0.0, 1.5)
+
+# Graphs Japan per capita land distribtion 
+Japan <- ggplot(data = Japan_graph_EF, aes(x = year, y = gha, color = `Type of Land` )) +
+  geom_line() +
+  # adds more years to the x axis 
+  scale_x_continuous(
+    breaks = round(seq(min(graph_EF$year), max(graph_EF$year), by = 10), 1)) + 
+  labs(title = "Japan: Per Capita Resource Distribution",
+       x = "Year", 
+       y = "Global Hectares") + 
+  # customizes the colors and renames the variable and legend titles
+  scale_color_manual(
+    values=c("darkgrey", "darkcyan", "midnightblue", "darkgreen", "brown"),
+    labels=c("Built-up Land", "Cropland", "Fishing Ground", "Forest Land", "Grazing Land"),
+    name = "Land Type") +
+  chart_theme +
+  ylim(0.0, 1.5)
+
+# Graphs Russia per capita land distribution
+Russia <- ggplot(data = Russia_graph_EF, aes(x = year, y = gha, color = `Type of Land`)) +
+  geom_line() +
+  # adds more years to the x axis
+  scale_x_continuous(
+    breaks = round(seq(min(graph_EF$year), max(graph_EF$year), by = 10), 1)) + 
+  labs(title = "Russia: Per Capita Resource Distribution", 
+       x = "Year", 
+       y = "Global Hectares") + 
+  # customizes the colors and renames the variable and legend titles
+  scale_color_manual(
+    values=c("darkgrey", "darkcyan", "midnightblue", "darkgreen", "brown"),
+    labels=c("Built-up Land", "Cropland", "Fishing Ground", "Forest Land", "Grazing Land"),
+    name = "Land Type") +
+  chart_theme +
+  ylim(0.0, 1.5)
+
+
+# Making grid arranged shared legend
+grid_arrange_shared_legend <- function(..., ncol = length(list(...)), nrow = 1, position = c("bottom", "right")) {
+  
+  plots <- list(...)
+  position <- match.arg(position)
+  g <- ggplotGrob(plots[[1]] + theme(legend.position = position))$grobs
+  legend <- g[[which(sapply(g, function(x) x$name) == "guide-box")]]
+  lheight <- sum(legend$height)
+  lwidth <- sum(legend$width)
+  gl <- lapply(plots, function(x) x + theme(legend.position="none"))
+  gl <- c(gl, ncol = ncol, nrow = nrow)
+  
+  combined <- switch(position,
+                     "bottom" = arrangeGrob(do.call(arrangeGrob, gl),
+                                            legend,
+                                            ncol = 1,
+                                            heights = unit.c(unit(1, "npc") - lheight, lheight)),
+                     "right" = arrangeGrob(do.call(arrangeGrob, gl),
+                                           legend,
+                                           ncol = 2,
+                                           widths = unit.c(unit(1, "npc") - lwidth, lwidth)))
+  
+  grid.newpage()
+  grid.draw(combined)
+  # return gtable invisibly
+  invisible(combined)
+}
+
+grid_arrange_shared_legend(China, USA, India, Russia, Japan, ncol = 2, nrow = 3)
+
+```
+
+The United States and Russia have much higher resource availability per capita than India, China and Japan. China and India are some of the top emitters however this is largely due to their population sizes, as many of their resources per capita are much lower. Russia has recently increased it’s forest land per capita, where the US and Japan have had some amount of decrease. This deforestation removes an important buffer that soaks up a certain amount of carbon dioxide. 
+
+All of the top contributors of carbon emissions are at different developmental stages of their economies and have different climates and habitats. They have vastly different population sizes. However, we can expect that in their effort to expand their economies developing countries will continue to increase their carbon emissions overall, and potentially per capita as well. 
+
+Our economy has transitioned from a manufacturing economy to a service economy. As the highest per capita carbon emitter, we can only expect as other countries economy’s follow that there rates may parallel ours. Many other country’s total rates will be higher than ours since their populations are much larger. When we find a solution to curbing our carbon emissions, our model will help many other countries around the world. With less carbon from all countries emitted into the atmosphere, climate change will decelerate and the earth’s land and resources will have time to regenerate and provide for all of us. 
+
+# About the Data
+
+This data was originally collected by the Global Footprint Network ^[https://www.footprintnetwork.org/], an international nonprofit organization working to aid in global decision making around climate change through education. 
+
+
+
